@@ -654,7 +654,16 @@ $("modal").addEventListener("click", (e) => { if (e.target.id === "modal") cerra
 
 // Guarda todo en el celular para que funcione sin internet
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-  navigator.serviceWorker.register("sw.js").then(() => {
+  // Si llega una versión nueva mientras está abierta, recarga una vez para mostrarla
+  if (navigator.serviceWorker.controller) {
+    let recargada = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (recargada || $("intro").hidden) return; // no interrumpir si ya está leyendo un mensaje
+      recargada = true;
+      location.reload();
+    });
+  }
+  navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(() => {
     CONFIG.fotos.forEach((f) => { const i = new Image(); i.src = f.archivo; });
   });
 }
