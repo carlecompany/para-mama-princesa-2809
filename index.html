@@ -182,6 +182,51 @@
     backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   }
   .sonido[hidden] { display: none; }
+  .guardar {
+    font: 700 15px "Quicksand", sans-serif; color: var(--bg1);
+    background: linear-gradient(135deg, #ffe0e8, var(--rosa)); border: 0; border-radius: 999px;
+    padding: 12px 22px; cursor: pointer; box-shadow: 0 8px 22px rgba(255,143,171,.35);
+    opacity: 0; animation: aparecer .6s .8s ease forwards;
+  }
+  .guardar[hidden] { display: none; }
+  .guardar:active { transform: scale(.96); }
+
+  .modal {
+    position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+    padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+    background: rgba(20, 6, 24, .72); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  }
+  .modal.arriba { justify-content: flex-start; padding-top: max(90px, env(safe-area-inset-top)); }
+  .modal[hidden] { display: none; }
+  .hoja {
+    background: var(--papel); color: var(--tinta); border-radius: 22px; padding: 22px 20px 18px;
+    width: 100%; max-width: 420px; text-align: left; animation: aparecer .35s ease both;
+    box-shadow: 0 20px 50px rgba(0,0,0,.4);
+  }
+  .hoja .cabeza { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .hoja .cabeza img { width: 48px; height: 48px; border-radius: 12px; }
+  .hoja h2 { font-family: "Caveat", cursive; font-size: 30px; line-height: 1; }
+  .paso { display: flex; gap: 12px; align-items: flex-start; padding: 9px 0; font-size: 17px; line-height: 1.35; }
+  .paso .num {
+    flex: none; width: 32px; height: 32px; border-radius: 50%; background: var(--rosa); color: #fff;
+    display: grid; place-items: center; font-weight: 700; font-size: 16px;
+  }
+  .paso b { color: #b0284f; }
+  .paso small { display: block; font-size: 14px; opacity: .75; margin-top: 3px; }
+  .ico { display: inline-flex; align-items: center; justify-content: center; vertical-align: -6px; min-width: 28px; height: 26px; padding: 0 5px; border-radius: 7px; background: #f1e1e8; font-weight: 700; }
+  .ico svg { width: 18px; height: 18px; }
+  .final { margin-top: 8px; padding: 12px; border-radius: 14px; background: #fde9ef; font-size: 15px; text-align: center; }
+  .hoja .boton { opacity: 1; transform: none; pointer-events: auto; width: 100%; margin-top: 14px; background: var(--bg1); color: var(--texto); }
+  .senal {
+    position: fixed; z-index: 11; font-size: 46px; pointer-events: none;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,.5));
+  }
+  .senal.arriba-der { top: max(6px, env(safe-area-inset-top)); right: 18px; animation: brincarArriba 1s ease-in-out infinite; }
+  .senal.abajo { bottom: max(4px, env(safe-area-inset-bottom)); left: 50%; margin-left: -23px; animation: brincarAbajo 1s ease-in-out infinite; }
+  .senal[hidden] { display: none; }
+  @keyframes brincarArriba { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+  @keyframes brincarAbajo { 0%,100% { transform: translateY(0); } 50% { transform: translateY(12px); } }
+
   @keyframes aparecer { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
   @keyframes respirar { 0%,100% { transform: scale(.8); } 50% { transform: scale(1.5); } }
   @keyframes flotar { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-10px) rotate(1deg); } }
@@ -234,6 +279,7 @@
       <button class="animo" data-animo="extranas"><span class="emo">🫂</span>Si nos extrañas</button>
       <button class="animo" data-animo="sonreir"><span class="emo">☀️</span>Si solo quieres sonreír</button>
     </div>
+    <button class="guardar" id="guardar" hidden>💖 Guárdame en tu celular</button>
   </section>
 
   <section class="escena" id="carta" hidden>
@@ -255,6 +301,15 @@
 <div id="efectos" aria-hidden="true"></div>
 <button class="sonido" id="sonido" aria-label="Silenciar música" hidden>🔊</button>
 <audio id="musica" loop preload="auto"></audio>
+
+<div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modalTitulo">
+  <div class="hoja">
+    <div class="cabeza"><img src="icon-192.png" alt=""><h2 id="modalTitulo">Guárdame en tu celular</h2></div>
+    <div id="pasos"></div>
+    <button class="boton" id="cerrarModal">Entendido 💖</button>
+  </div>
+</div>
+<div class="senal" id="senal" hidden aria-hidden="true">👆</div>
 
 <script>
 /* ============================================================
@@ -534,6 +589,68 @@ $("volver").addEventListener("click", () => {
 });
 
 $("firma").textContent = rellenar(CONFIG.firma);
+
+// ---------- Botón "Guárdame en tu celular" ----------
+const COMPARTIR = '<span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></span>';
+const ua = navigator.userAgent;
+const esIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const esAndroid = /Android/.test(ua);
+const enOtraApp = /FBAN|FBAV|Instagram|Line\/|; wv\)/.test(ua);
+const yaInstalada = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+let avisoInstalar = null;
+
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); avisoInstalar = e; });
+window.addEventListener("appinstalled", () => { $("guardar").hidden = true; });
+
+const paso = (n, html) => `<div class="paso"><span class="num">${n}</span><div>${html}</div></div>`;
+const FINAL = '<div class="final">¡Listo! Te va a quedar un <b>corazón rosado</b> con tus apps que dice <b>"Para Mamá"</b>. Tócalo cada vez que nos necesites ❤️</div>';
+
+function instrucciones() {
+  if (enOtraApp) return { senal: "arriba-der", html:
+    paso(1, 'Toca los <b>puntitos</b> <span class="ico">⋮</span> o <span class="ico">•••</span> de arriba.') +
+    paso(2, 'Elige <b>"Abrir en el navegador"</b> (Chrome o Safari).') +
+    paso(3, 'Ahí vuelve a tocar <b>💖 Guárdame en tu celular</b>.') };
+  if (esIOS && /CriOS|EdgiOS|FxiOS/.test(ua)) return { senal: "arriba-der", html:
+    paso(1, `Toca este botón ${COMPARTIR} que está <b>arriba a la derecha</b>, al lado del link.`) +
+    paso(2, 'Baja un poquito y toca <b>"Agregar a pantalla de inicio"</b>.') +
+    paso(3, 'Toca <b>"Agregar"</b>.') + FINAL };
+  if (esIOS) return { senal: "abajo", html:
+    paso(1, `Toca el botón ${COMPARTIR} que está <b>abajo</b>.<small>Si no lo ves, toca los tres puntitos <span class="ico">•••</span> y luego <b>Compartir</b>.</small>`) +
+    paso(2, 'Baja un poquito y toca <b>"Agregar a inicio"</b>.') +
+    paso(3, 'Toca <b>"Agregar"</b> arriba a la derecha.') + FINAL };
+  if (esAndroid) return { senal: "arriba-der", html:
+    paso(1, 'Toca los <b>tres puntitos</b> <span class="ico">⋮</span> de <b>arriba a la derecha</b>.') +
+    paso(2, 'Toca <b>"Agregar a pantalla principal"</b> o <b>"Instalar aplicación"</b>.') +
+    paso(3, 'Toca <b>"Agregar"</b> o <b>"Instalar"</b>.') + FINAL };
+  return { senal: null, html: '<p class="paso">Abre este link desde tu celular y ahí toca <b>💖 Guárdame en tu celular</b>.</p>' };
+}
+
+function abrirModal() {
+  const { senal, html } = instrucciones();
+  $("pasos").innerHTML = html;
+  $("modal").classList.toggle("arriba", senal === "abajo");
+  $("modal").hidden = false;
+  const s = $("senal");
+  s.hidden = !senal;
+  s.className = "senal " + (senal || "");
+  s.textContent = senal === "abajo" ? "👇" : "👆";
+}
+function cerrarModal() { $("modal").hidden = true; $("senal").hidden = true; }
+
+if (!yaInstalada) $("guardar").hidden = false;
+$("guardar").addEventListener("click", async () => {
+  vibrar(15);
+  if (avisoInstalar) {
+    avisoInstalar.prompt();
+    const { outcome } = await avisoInstalar.userChoice;
+    avisoInstalar = null;
+    if (outcome === "accepted") $("guardar").hidden = true;
+    return;
+  }
+  abrirModal();
+});
+$("cerrarModal").addEventListener("click", cerrarModal);
+$("modal").addEventListener("click", (e) => { if (e.target.id === "modal") cerrarModal(); });
 
 // Guarda todo en el celular para que funcione sin internet
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {

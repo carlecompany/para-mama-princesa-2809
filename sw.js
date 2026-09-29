@@ -1,6 +1,6 @@
 // Guarda la app en el celular para que abra aunque no haya internet.
 // Si cambias fotos o mensajes, sube el número de versión.
-const CACHE = "para-mama-v5";
+const CACHE = "para-mama-v6";
 const BASE = ["./", "index.html", "manifest.json", "icon-192.png", "icon-512.png", "fotos/mama-y-yo.jpg", "fotos/perrita.jpg", "musica/cancion.mp3"];
 
 self.addEventListener("install", (e) => {
